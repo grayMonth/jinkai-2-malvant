@@ -1,0 +1,826 @@
+{
+  "id": "scenario-02",
+  "title": "クラウドアカウント侵害対応シミュレーション",
+  "subtitle": "認証情報侵害・セッション失効・不正操作調査",
+  "organization": "サンプル企画株式会社 情報借報システム部",
+  "objective": "クラウドサービスのアカウント侵害を想定し、アカウント保護、不正セッションの遮断、監査ログ調査、関係者への連携を体験する",
+  "startNode": "node_01",
+  "recommendedRoute": "node_01 -> node_02_a -> node_03_a -> node_04_a -> ending_true",
+  "nodes": {
+    "node_01": {
+      "id": "node_01",
+      "phase": "Phase 1: 初動対応",
+      "eyebrow": "アカウント侵害疑い",
+      "title": "クラウド管理者アカウントに不審なログイン",
+      "body": [
+        "経理部のクラウド管理者アカウントについて、深夜に海外IPからのログインが検知された。",
+        "本人はその時間帯にログインしておらず、直後に新しいOAuthアプリへの権限付与も記録されている。",
+        "現時点では、攻撃者が認証情報だけを取得したのか、セッションまで乗っ取ったのか不明。"
+      ],
+      "alert": "認証情報の悪用が継続している可能性があります",
+      "evidence": [
+        {
+          "label": "サインインログ",
+          "value": "通常と異なる国・時間帯から成功ログイン",
+          "tone": "danger"
+        },
+        {
+          "label": "OAuth",
+          "value": "未承認アプリへの権限付与を検知",
+          "tone": "danger"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c1_1",
+          "label": "パスワードだけ変更し、アカウントは通常利用できる状態にする",
+          "description": "業務影響を抑えながら認証情報を更新する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_02_b",
+            "tag": "認証情報",
+            "rationale": "パスワード変更は一つの対策ですが、既存セッションや第三者アプリの権限が残っている場合、それだけでは不正利用を止められない可能性があります。",
+            "metrics": {
+              "containment": 10,
+              "service": 5,
+              "trust": 0,
+              "fatigue": 5
+            }
+          }
+        },
+        {
+          "id": "c1_2",
+          "label": "本人確認を行ったうえでアカウントを一時停止し、不審なセッションを確認する",
+          "description": "利用継続を止め、侵害状態を確認するための情報を残す。",
+          "effect": {
+            "rank": "recommended",
+            "nextNode": "node_02_a",
+            "tag": "アカウント保護",
+            "rationale": "継続中の不正利用を止めながら、どの認証・セッションが関係しているかを確認できる状態を保つことが重要です。",
+            "metrics": {
+              "containment": 30,
+              "service": -5,
+              "trust": 15,
+              "fatigue": 5
+            }
+          }
+        },
+        {
+          "id": "c1_3",
+          "label": "本人の端末からクラウドへ再ログインして、問題が解消したか確認する",
+          "description": "正規利用者として再ログインし、通常状態に戻ったか確認する。",
+          "effect": {
+            "rank": "bad",
+            "nextNode": "ending_bad_active_hijack",
+            "tag": "再ログイン",
+            "rationale": "侵害が継続している状態で無防備に再ログインすると、そのセッションや認証情報を追加で攻撃者に悪用される可能性があります。",
+            "metrics": {
+              "containment": -15,
+              "service": 5,
+              "trust": -10,
+              "fatigue": 10
+            }
+          }
+        },
+        {
+          "id": "c1_4",
+          "label": "不審なOAuthアプリを削除するだけで、アカウント調査は行わない",
+          "description": "原因と思われるアプリだけを取り除く。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_02_c",
+            "tag": "権限削除",
+            "rationale": "不審な権限を取り除くことは重要ですが、既に取得されたセッションや他の変更を見逃す可能性があります。",
+            "metrics": {
+              "containment": 15,
+              "service": 5,
+              "trust": -5,
+              "fatigue": 5
+            }
+          }
+        }
+      ]
+    },
+    "node_02_a": {
+      "id": "node_02_a",
+      "phase": "Phase 2: セッション遮断",
+      "eyebrow": "侵害範囲の確認",
+      "title": "アカウント停止後に残る不審なアクセス",
+      "body": [
+        "アカウントを一時停止した後も、監査ログには直前まで利用されていた複数のセッションが記録されている。",
+        "OAuthアプリにはメール・ファイルへのアクセス権限が含まれている。",
+        "業務側からは「アカウント停止を長引かせないでほしい」と要望が来ている。"
+      ],
+      "alert": "認証情報だけでなく、既存セッションと第三者アプリ権限も確認が必要です",
+      "evidence": [
+        {
+          "label": "セッション",
+          "value": "複数の既存セッションを確認",
+          "tone": "warning"
+        },
+        {
+          "label": "OAuth権限",
+          "value": "メール・ファイルへの読み取り権限あり",
+          "tone": "danger"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c2a_1",
+          "label": "パスワード変更後、セッションはそのままにして業務を再開する",
+          "description": "利用者の再ログイン負担を減らす。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_03_b",
+            "tag": "業務継続",
+            "rationale": "既存セッションが有効なままだと、認証情報を更新しても不正利用が継続する可能性があります。",
+            "metrics": {
+              "containment": 0,
+              "service": 15,
+              "trust": -5,
+              "fatigue": 5
+            }
+          }
+        },
+        {
+          "id": "c2a_2",
+          "label": "すべてのクラウドユーザーを強制ログアウトする",
+          "description": "広範囲のセッションを一括で無効化する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_03_c",
+            "tag": "一括遮断",
+            "rationale": "強制ログアウトは封じ込めに寄与しますが、影響範囲を広げるため、必要な範囲を見極めて実施する必要があります。",
+            "metrics": {
+              "containment": 20,
+              "service": -20,
+              "trust": 5,
+              "fatigue": 15
+            }
+          }
+        },
+        {
+          "id": "c2a_3",
+          "label": "既存セッションを失効させ、OAuth権限と監査ログを保全する",
+          "description": "継続利用を止めたうえで、不正操作の調査材料を確保する。",
+          "effect": {
+            "rank": "recommended",
+            "nextNode": "node_03_a",
+            "tag": "セッション・証拠",
+            "rationale": "認証情報の変更だけでは残存セッションを止められない場合があるため、セッションと第三者権限を分けて確認することが重要です。",
+            "metrics": {
+              "containment": 25,
+              "service": -10,
+              "trust": 15,
+              "fatigue": 10
+            }
+          }
+        }
+      ]
+    },
+    "node_02_b": {
+      "id": "node_02_b",
+      "phase": "Phase 2: 不正アクセス継続",
+      "eyebrow": "認証情報変更後",
+      "title": "パスワード変更後も不審な操作が発生",
+      "body": [
+        "パスワード変更を行った直後、監査ログに不審なファイル参照が追加された。",
+        "既存セッションとOAuthアプリの権限はまだ残っている。",
+        "攻撃者が別の経路を使っている可能性がある。"
+      ],
+      "alert": "認証情報変更だけでは侵害が終わっていない可能性があります",
+      "evidence": [
+        {
+          "label": "監査ログ",
+          "value": "パスワード変更後にも不審な参照を確認",
+          "tone": "danger"
+        },
+        {
+          "label": "OAuth",
+          "value": "未承認アプリの権限が残存",
+          "tone": "danger"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c2b_1",
+          "label": "セッションを失効させ、未承認アプリの権限を取り消す",
+          "description": "認証情報以外の継続利用経路を遮断する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_03_b",
+            "tag": "追加封じ込め",
+            "rationale": "認証情報以外のアクセス経路も確認し、継続利用できる状態を減らすことが必要です。",
+            "metrics": {
+              "containment": 25,
+              "service": -10,
+              "trust": 15,
+              "fatigue": 10
+            }
+          }
+        },
+        {
+          "id": "c2b_2",
+          "label": "監査ログの確認を後回しにして、通常業務を続ける",
+          "description": "業務影響を避けるため、調査を後回しにする。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_03_b",
+            "tag": "調査遅延",
+            "rationale": "不正操作が継続している兆候を確認した段階で調査を遅らせると、被害範囲の拡大を見逃す可能性があります。",
+            "metrics": {
+              "containment": -15,
+              "service": 15,
+              "trust": -15,
+              "fatigue": 10
+            }
+          }
+        },
+        {
+          "id": "c2b_3",
+          "label": "すべてのクラウドアカウントを停止する",
+          "description": "全社的に利用を止めて侵害を封じ込める。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_03_c",
+            "tag": "一括停止",
+            "rationale": "大きな封じ込め効果が期待できる一方、対象が広すぎると業務影響が大きくなります。侵害範囲とのバランスが必要です。",
+            "metrics": {
+              "containment": 25,
+              "service": -25,
+              "trust": 5,
+              "fatigue": 20
+            }
+          }
+        }
+      ]
+    },
+    "node_02_c": {
+      "id": "node_02_c",
+      "phase": "Phase 2: 権限悪用",
+      "eyebrow": "不正アプリ",
+      "title": "OAuthアプリ経由のアクセスが続く",
+      "body": [
+        "不審なOAuthアプリを削除したが、削除前に大量のメール参照が記録されていた。",
+        "さらに、アカウント側には別の認証セッションが残っている。",
+        "何を閲覧されたか、どの情報が持ち出されたかを調べる必要がある。"
+      ],
+      "alert": "侵害済みのアクセス経路と情報流出の有無を調査する必要があります",
+      "evidence": [
+        {
+          "label": "メール監査ログ",
+          "value": "短時間に大量のメール参照",
+          "tone": "danger"
+        },
+        {
+          "label": "セッション",
+          "value": "別の有効セッションが残存",
+          "tone": "warning"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c2c_1",
+          "label": "メール利用者へ一斉に削除を依頼し、問題のメールを消す",
+          "description": "情報漏えいの可能性があるメールを利用者側で削除する。",
+          "effect": {
+            "rank": "bad",
+            "nextNode": "ending_bad_evidence",
+            "tag": "証拠消失",
+            "rationale": "利用者に削除を指示することで、攻撃者がどのメールを閲覧・転送したのかという証拠が失われ、情報漏えいの監査が不可能になります。",
+            "metrics": {
+              "containment": 0,
+              "service": 5,
+              "trust": -15,
+              "fatigue": 15
+            }
+          }
+        },
+        {
+          "id": "c2c_2",
+          "label": "残存セッションを失効させ、メール監査ログを保全する",
+          "description": "継続アクセスを止めながら、参照範囲を調べられる状態にする。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_03_c",
+            "tag": "封じ込め・証拠",
+            "rationale": "継続中のアクセスを止めることと、何が行われたかを後から確認できる状態を両立する必要があります。",
+            "metrics": {
+              "containment": 25,
+              "service": -10,
+              "trust": 15,
+              "fatigue": 10
+            }
+          }
+        },
+        {
+          "id": "c2c_3",
+          "label": "不正アクセスの通知を全社員へ送信し、各自でパスワードを変更してもらう",
+          "description": "全員に注意喚起して個別対応を依頼する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_03_c",
+            "tag": "一斉周知",
+            "rationale": "注意喚起は必要ですが、個別の侵害経路が残った状態で利用者対応だけを進めると、封じ込めが不十分になる可能性があります。",
+            "metrics": {
+              "containment": 10,
+              "service": -10,
+              "trust": 5,
+              "fatigue": 20
+            }
+          }
+        }
+      ]
+    },
+    "node_03_a": {
+      "id": "node_03_a",
+      "phase": "Phase 3: 監査と影響範囲",
+      "eyebrow": "ログ分析",
+      "title": "不正操作の範囲を確定する",
+      "body": [
+        "セッションを失効させ、監査ログを保全した。",
+        "ログから、メール閲覧・ファイルアクセス・OAuth権限付与の時刻を並べて確認できるようになった。",
+        "現時点では外部共有設定が変更された形跡も一部確認されている。"
+      ],
+      "alert": "不正アクセスの範囲と、情報公開設定への影響を確認してください",
+      "evidence": [
+        {
+          "label": "監査ログ",
+          "value": "不正操作の時系列を構築可能",
+          "tone": "ok"
+        },
+        {
+          "label": "共有設定",
+          "value": "一部ファイルで設定変更の形跡",
+          "tone": "warning"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c3a_1",
+          "label": "不正アクセスが確認されたユーザーだけに連絡し、調査を終了する",
+          "description": "対象者を限定して業務への影響を抑える。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_04_b",
+            "tag": "限定対応",
+            "rationale": "ログ上の関連操作が他の共有資源にも及んでいる場合、対象者だけに絞ると影響範囲を見落とす可能性があります。",
+            "metrics": {
+              "containment": 5,
+              "service": 10,
+              "trust": -5,
+              "fatigue": 5
+            }
+          }
+        },
+        {
+          "id": "c3a_2",
+          "label": "共有設定をすべて公開設定に戻し、ログの確認は後で行う",
+          "description": "まず公開範囲を一律に修正して問題を収束させる。",
+          "effect": {
+            "rank": "bad",
+            "nextNode": "ending_bad_recompromise",
+            "tag": "設定変更",
+            "rationale": "詳細を確認せずに設定を一律で変更すると、攻撃者が仕込んだバックドア用の設定を見落としたり、正規の制限を外して情報漏えいを引き起こす可能性があります。",
+            "metrics": {
+              "containment": 10,
+              "service": -15,
+              "trust": -15,
+              "fatigue": 15
+            }
+          }
+        },
+        {
+          "id": "c3a_3",
+          "label": "不正操作の時刻・対象・共有設定変更を整理し、影響範囲を確定する",
+          "description": "ログを基に影響対象を特定し、必要な対外・社内対応へつなげる。",
+          "effect": {
+            "rank": "recommended",
+            "nextNode": "node_04_a",
+            "tag": "影響調査",
+            "rationale": "操作対象と時系列を整理すると、何が影響を受けたかを説明し、必要な対応範囲を決めやすくなります。",
+            "metrics": {
+              "containment": 15,
+              "service": 0,
+              "trust": 20,
+              "fatigue": 10
+            }
+          }
+        }
+      ]
+    },
+    "node_03_b": {
+      "id": "node_03_b",
+      "phase": "Phase 3: 影響範囲の不確定",
+      "eyebrow": "調査遅延",
+      "title": "不正アクセスの痕跡が増える",
+      "body": [
+        "調査を後回しにした結果、別のユーザーからも不審なファイル共有通知が届いた。",
+        "監査ログには複数ユーザーのファイルへのアクセスが記録されているが、関係性が整理できていない。"
+      ],
+      "alert": "侵害範囲が不明なままでは、利用再開の判断が難しくなります",
+      "evidence": [
+        {
+          "label": "ファイルアクセス",
+          "value": "複数ユーザーの資産へアクセス",
+          "tone": "danger"
+        },
+        {
+          "label": "共有通知",
+          "value": "不審な共有通知が複数件",
+          "tone": "warning"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c3b_1",
+          "label": "監査ログを中心に利用者・資産・時刻を整理して影響範囲を再構築する",
+          "description": "調査対象を整理し、追加の不正アクセスを確認する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_04_b",
+            "tag": "再調査",
+            "rationale": "調査を立て直すことで影響範囲を把握できますが、初期の調査遅延により対応コストと不確実性が増えています。",
+            "metrics": {
+              "containment": 10,
+              "service": 0,
+              "trust": 10,
+              "fatigue": 20
+            }
+          }
+        },
+        {
+          "id": "c3b_2",
+          "label": "不審な共有通知を受けた利用者だけにパスワード変更を依頼する",
+          "description": "対象者を絞って対応を進める。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_04_b",
+            "tag": "限定対応",
+            "rationale": "アクセス対象が複数資産に広がっている状況で利用者単位だけに対応すると、侵害経路や対象資産を見落とす可能性があります。",
+            "metrics": {
+              "containment": 5,
+              "service": 5,
+              "trust": -15,
+              "fatigue": 10
+            }
+          }
+        },
+        {
+          "id": "c3b_3",
+          "label": "クラウドサービスを全面停止して調査を行う",
+          "description": "調査を優先して全社のクラウド利用を止める。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_04_c",
+            "tag": "全面停止",
+            "rationale": "全面停止は追加被害を抑えやすい一方、調査対象と業務影響を明確に分けないと復旧が難しくなります。",
+            "metrics": {
+              "containment": 20,
+              "service": -25,
+              "trust": 5,
+              "fatigue": 20
+            }
+          }
+        }
+      ]
+    },
+    "node_03_c": {
+      "id": "node_03_c",
+      "phase": "Phase 3: 組織影響",
+      "eyebrow": "広範囲遮断",
+      "title": "クラウド利用停止による業務影響",
+      "body": [
+        "広範囲のアカウント停止により、営業・経理・開発の一部業務が停止した。",
+        "一方で、攻撃者による新たな操作は観測されていない。",
+        "復旧する範囲と、引き続き調査する範囲を決める必要がある。"
+      ],
+      "alert": "封じ込め後は、調査結果に基づいて安全に復旧範囲を絞り込んでください",
+      "evidence": [
+        {
+          "label": "不正操作",
+          "value": "新規の不正操作は観測されていない",
+          "tone": "ok"
+        },
+        {
+          "label": "業務影響",
+          "value": "複数部門でクラウド業務が停止",
+          "tone": "danger"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c3c_1",
+          "label": "侵害が確認された範囲を特定し、問題のない範囲から段階的に復旧する",
+          "description": "安全性を確認した利用者・資産から順に復旧する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_04_c",
+            "tag": "段階的復旧",
+            "rationale": "全面停止から復旧へ移る際は、侵害範囲と安全確認の結果を基準に対象を絞ることが重要です。",
+            "metrics": {
+              "containment": 15,
+              "service": 20,
+              "trust": 15,
+              "fatigue": 10
+            }
+          }
+        },
+        {
+          "id": "c3c_2",
+          "label": "全ユーザーをすぐに再有効化し、様子を見る",
+          "description": "業務影響を早く解消するため、一括で利用を再開する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_04_b",
+            "tag": "一括復旧",
+            "rationale": "侵害範囲が確定していない状態で一括復旧すると、残存する侵害経路が再利用される可能性があります。",
+            "metrics": {
+              "containment": -15,
+              "service": 25,
+              "trust": -15,
+              "fatigue": 10
+            }
+          }
+        },
+        {
+          "id": "c3c_3",
+          "label": "停止状態を維持し、利用者への説明だけを行う",
+          "description": "安全確認が終わるまで復旧を進めない。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "node_04_c",
+            "tag": "復旧保留",
+            "rationale": "安全確認は重要ですが、問題のない範囲まで停止し続けると業務影響が長期化します。",
+            "metrics": {
+              "containment": 15,
+              "service": -25,
+              "trust": 0,
+              "fatigue": 20
+            }
+          }
+        }
+      ]
+    },
+    "node_04_a": {
+      "id": "node_04_a",
+      "phase": "Phase 4: 復旧と報告",
+      "eyebrow": "影響範囲確定",
+      "title": "安全なアカウント復旧と関係者への説明",
+      "body": [
+        "不正操作の範囲と時系列が整理され、侵害されたアカウント・資産と安全確認済みの範囲を区別できた。",
+        "最後に、復旧、監視、関係者への報告をどのように進めるか決める。"
+      ],
+      "alert": "復旧後も認証・権限・監査ログの監視を継続してください",
+      "evidence": [
+        {
+          "label": "影響範囲",
+          "value": "対象ユーザー・資産を特定済み",
+          "tone": "ok"
+        },
+        {
+          "label": "監視",
+          "value": "監査ログを継続取得可能",
+          "tone": "ok"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c4a_1",
+          "label": "全ユーザーを一括復旧し、監査ログの監視を通常状態へ戻す",
+          "description": "業務影響を解消して通常運用へ戻す。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "ending_normal",
+            "tag": "一括復旧",
+            "rationale": "一括復旧は業務影響を下げますが、復旧後の監視を弱めると再侵害の兆候を見逃す可能性があります。",
+            "metrics": {
+              "containment": 5,
+              "service": 20,
+              "trust": 5,
+              "fatigue": 5
+            }
+          }
+        },
+        {
+          "id": "c4a_2",
+          "label": "安全確認済みの範囲から復旧し、権限・セッション・監査ログを継続監視する",
+          "description": "復旧条件を満たした範囲だけを戻し、再発兆候を追跡する。",
+          "effect": {
+            "rank": "recommended",
+            "nextNode": "ending_true",
+            "tag": "復旧・監視",
+            "rationale": "復旧後も認証状態と権限変更を追跡できる体制を残すことで、再侵害の兆候を早期に把握できます。",
+            "metrics": {
+              "containment": 15,
+              "service": 20,
+              "trust": 20,
+              "fatigue": 5
+            }
+          }
+        },
+        {
+          "id": "c4a_3",
+          "label": "影響範囲を社内だけで共有し、外部関係者への報告は行わない",
+          "description": "混乱を避けるため、社内対応に限定する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "ending_normal",
+            "tag": "報告範囲",
+            "rationale": "報告対象は事案の性質や契約・法令等によって異なります。必要な関係者を確認せずに範囲を固定すると、後続対応が遅れる可能性があります。",
+            "metrics": {
+              "containment": 10,
+              "service": 0,
+              "trust": -10,
+              "fatigue": 10
+            }
+          }
+        }
+      ]
+    },
+    "node_04_b": {
+      "id": "node_04_b",
+      "phase": "Phase 4: 再侵害リスク",
+      "eyebrow": "復旧後の監視",
+      "title": "復旧後に再び不審なアクセス",
+      "body": [
+        "一部ユーザーを復旧した直後、同じ地域からの不審なアクセスが再び記録された。",
+        "侵害経路が完全に除去されていない可能性がある。"
+      ],
+      "alert": "復旧後の再アクセスは、セッション・権限・認証要素を再確認する材料です",
+      "evidence": [
+        {
+          "label": "サインイン",
+          "value": "復旧直後に同一地域から再アクセス",
+          "tone": "danger"
+        },
+        {
+          "label": "権限",
+          "value": "一部アプリ権限の確認が未完了",
+          "tone": "warning"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c4b_1",
+          "label": "該当ユーザーを再隔離し、認証要素とアプリ権限を再確認する",
+          "description": "再侵害の可能性がある範囲を限定して調査を続ける。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "ending_normal",
+            "tag": "再調査",
+            "rationale": "再侵害を止める対応は必要ですが、初期の復旧判断で残存経路を十分に確認できていなかったため、追加対応が発生しています。",
+            "metrics": {
+              "containment": 20,
+              "service": 0,
+              "trust": 5,
+              "fatigue": 20
+            }
+          }
+        },
+        {
+          "id": "c4b_2",
+          "label": "業務影響を避けるため、該当ユーザーもそのまま利用させる",
+          "description": "停止範囲を広げず業務を継続する。",
+          "effect": {
+            "rank": "bad",
+            "nextNode": "ending_bad_recompromise",
+            "tag": "継続利用",
+            "rationale": "再侵害を示す兆候を確認した状態で利用を継続すると、攻撃者による不正な操作が再び行われる可能性があります。",
+            "metrics": {
+              "containment": -30,
+              "service": 15,
+              "trust": -20,
+              "fatigue": 15
+            }
+          }
+        },
+        {
+          "id": "c4b_3",
+          "label": "クラウド全体を停止し、監査ログを確認せずに認証基盤を初期化する",
+          "description": "再発防止を優先して環境を作り直す。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "ending_normal",
+            "tag": "全面初期化",
+            "rationale": "全面停止は封じ込めに寄与しますが、ログを確認せずに初期化すると再侵害の原因を把握できなくなる可能性があります。",
+            "metrics": {
+              "containment": 25,
+              "service": -30,
+              "trust": -5,
+              "fatigue": 25
+            }
+          }
+        }
+      ]
+    },
+    "node_04_c": {
+      "id": "node_04_c",
+      "phase": "Phase 4: 復旧調整",
+      "eyebrow": "業務影響",
+      "title": "安全確認と業務継続の調整",
+      "body": [
+        "長時間の停止により業務影響が拡大している。",
+        "一方、侵害範囲の一部はまだ確定していない。情報システム部は復旧条件を明確にして判断する必要がある。"
+      ],
+      "alert": "安全性が確認できた範囲と未確認範囲を分けて扱ってください",
+      "evidence": [
+        {
+          "label": "侵害範囲",
+          "value": "一部資産は未確認",
+          "tone": "warning"
+        },
+        {
+          "label": "業務影響",
+          "value": "複数部門の業務が停滞",
+          "tone": "danger"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c4c_1",
+          "label": "安全性を確認できた利用者・資産から段階的に復旧し、未確認範囲は監視を続ける",
+          "description": "復旧可能な範囲と調査継続範囲を分ける。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "ending_normal",
+            "tag": "段階的復旧",
+            "rationale": "安全性と業務継続を両立する考え方ですが、初期対応の遅れにより調査・監視の負荷が残っています。",
+            "metrics": {
+              "containment": 15,
+              "service": 15,
+              "trust": 10,
+              "fatigue": 15
+            }
+          }
+        },
+        {
+          "id": "c4c_2",
+          "label": "業務影響を理由に未確認の利用者も一括で復旧する",
+          "description": "停止を長引かせないため、確認前に利用を再開する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "ending_normal",
+            "tag": "未確認復旧",
+            "rationale": "侵害範囲が未確定の状態で一括復旧すると、残存する侵害経路が再利用される可能性があります。",
+            "metrics": {
+              "containment": -25,
+              "service": 25,
+              "trust": -15,
+              "fatigue": 15
+            }
+          }
+        },
+        {
+          "id": "c4c_3",
+          "label": "侵害範囲が確定するまで全サービスを停止し続ける",
+          "description": "安全確認を優先し、復旧を保留する。",
+          "effect": {
+            "rank": "normal",
+            "nextNode": "ending_normal",
+            "tag": "復旧保留",
+            "rationale": "安全性を優先する一方、確認済みの範囲まで停止し続けることは業務影響を長期化させます。",
+            "metrics": {
+              "containment": 20,
+              "service": -30,
+              "trust": 0,
+              "fatigue": 25
+            }
+          }
+        }
+      ]
+    }
+  },
+  "endings": {
+    "ending_true": {
+      "id": "ending_true",
+      "type": "true",
+      "title": "True End: 侵害経路の遮断と安全な復旧",
+      "summary": "不正セッションと権限を整理し、影響範囲を把握したうえで安全な範囲から復旧し、継続監視につなげました。"
+    },
+    "ending_normal": {
+      "id": "ending_normal",
+      "type": "normal",
+      "title": "Normal End: 侵害収束（追加確認が必要）",
+      "summary": "大きな再拡大は避けられましたが、調査範囲、業務影響、監視体制などに改善点が残りました。振り返りで各判断の影響を確認してください。"
+    },
+    "ending_bad_active_hijack": {
+      "id": "ending_bad_active_hijack",
+      "type": "bad",
+      "title": "Bad End: 無防備なアクセスによる被害拡大",
+      "summary": "侵害が継続している状態で本人の端末から直接アクセスしたことで、攻撃者にさらなる悪用の機会を与え、二次被害を引き起こしました。"
+    },
+    "ending_bad_evidence": {
+      "id": "ending_bad_evidence",
+      "type": "bad",
+      "title": "Bad End: 不適切な操作による証拠消失",
+      "summary": "利用者への不用意な指示により重要なログやメールが削除され、何が漏えいしたのかを特定する手段が永遠に失われました。"
+    },
+    "ending_bad_recompromise": {
+      "id": "ending_bad_recompromise",
+      "type": "bad",
+      "title": "Bad End: 残存経路からの情報漏えい",
+      "summary": "不審なOAuthアプリや外部共有設定の確認を怠ったまま運用を再開したため、見えない裏口から機密情報が抜き取られ続けました。"
+    }
+  }
+}
