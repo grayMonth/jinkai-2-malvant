@@ -1,0 +1,12 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import first from '../data/scenario-01.json';
+import second from '../data/scenario-02.json';
+import {validateScenario,initialState,choose} from './game';
+const s=validateScenario(first);
+test('recommended path yields True End and exact cumulative metrics',()=>{let g=initialState(s);g=choose(s,g,'c1_1');assert.equal(g.ending,null);g=choose(s,g,'c2_1');assert.equal(g.ending?.type,'true');assert.deepEqual(g.metrics,{containment:80,service:-5,trust:30,fatigue:20});assert.equal(g.history[0].metrics.containment,30)});
+test('neutral path targeting true ending is evaluated as Normal End',()=>{let g=choose(s,initialState(s),'c1_3');g=choose(s,g,'c2_1');assert.equal(g.ending?.type,'normal')});
+test('bad choice ends immediately even when nextNode is a regular node',()=>{const copy=structuredClone(s);copy.nodes.node_01.choices[1].effect.nextNode='node_02';const g=choose(copy,initialState(copy),'c1_2');assert.equal(g.ending?.type,'bad');assert.equal(g.history.length,1);assert.deepEqual(choose(copy,g,'c1_1'),g)});
+test('retry resets scores and history; values are never clamped',()=>{const g=choose(s,initialState(s),'c1_2');assert.equal(g.metrics.containment,-50);assert.equal(initialState(s).history.length,0);const copy=structuredClone(s);copy.nodes.node_01.choices[0].effect.metrics.containment=150;assert.equal(choose(copy,initialState(copy),'c1_1').metrics.containment,150)});
+test('invalid targets and nonfinite scores are rejected',()=>{const copy=structuredClone(s);copy.nodes.node_01.choices[0].effect.nextNode='missing';assert.throws(()=>validateScenario(copy));copy.nodes.node_01.choices[0].effect.nextNode='node_02';copy.nodes.node_01.choices[0].effect.metrics.trust=Infinity;assert.throws(()=>validateScenario(copy))});
+test('second scenario has playable true, normal, and bad routes',()=>{const r=validateScenario(second);assert.equal(choose(r,choose(r,initialState(r),'r1-a'),'r2-a').ending?.type,'true');assert.equal(choose(r,choose(r,initialState(r),'r1-b'),'r2-a').ending?.type,'normal');assert.equal(choose(r,initialState(r),'r1-c').ending?.type,'bad')});

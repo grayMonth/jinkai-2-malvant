@@ -1,0 +1,132 @@
+{
+  "id": "scenario-01",
+  "title": "標的型メール攻撃対応シミュレーション",
+  "subtitle": "初期対応と二次被害防止",
+  "organization": "サンプル商事株式会社 情報システム部",
+  "objective": "不審メール受信時の適切な初動対応と関係各所への報告手順を習得する",
+  "startNode": "node_01",
+  "recommendedRoute": "node_01 -> node_02 -> ending_true",
+  "nodes": {
+    "node_01": {
+      "id": "node_01",
+      "phase": "Phase 1: 初動対応",
+      "eyebrow": "マルウェア疑い",
+      "title": "不審な添付ファイルの開封連絡",
+      "body": [
+        "営業部の社員から「取引先からの請求書メールの添付ファイルを開いてしまった」と連絡が入った。",
+        "端末の動作が重くなり、見慣れない通信が発生している模様。"
+      ],
+      "alert": "ネットワーク感染拡大の危険性があります",
+      "evidence": [
+        {
+          "label": "通信ログ",
+          "value": "未知のIPアドレスへのアウトバウンド通信検知",
+          "tone": "danger"
+        }
+      ],
+      "choices": [
+        {
+          "id": "c1_1",
+          "label": "該当PCを即座にLANケーブルから抜去（ネットワーク切断）する",
+          "description": "感染端末を物理的に切り離し、被害拡大を防ぐ。",
+          "effect": {
+            "rank": "recommended",
+            "nextNode": "node_02",
+            "tag": "一次対応",
+            "rationale": "マルウェア疑い発生時の初動として、ネットワーク切り離しによる横展開防止は最優先かつ正しい手順です。",
+            "metrics": {
+              "containment": 30,
+              "service": 0,
+              "trust": 10,
+              "fatigue": 5
+            }
+          }
+        },
+        {
+          "id": "c1_2",
+          "label": "端末をシャットダウンし、明日まで様子を見る",
+          "description": "端末の電源を切り、報告を保留する。",
+          "effect": {
+            "rank": "bad",
+            "nextNode": "ending_bad_01",
+            "tag": "放置",
+            "rationale": "報告の遅延や隠蔽は被害を致命的に拡大させます。即時Bad Endとなります。",
+            "metrics": {
+              "containment": -50,
+              "service": 0,
+              "trust": -50,
+              "fatigue": 0
+            }
+          }
+        },
+        {
+          "id": "c1_3",
+          "label": "セキュリティソフトのスキャンを実行しながら業務を継続させる",
+          "description": "ネットワークは切断せずスキャンを行う。",
+          "effect": {
+            "rank": "neutral",
+            "nextNode": "node_02",
+            "tag": "不十分な対応",
+            "rationale": "スキャン中もC2サーバーとの通信が継続するリスクがあり、推奨されません。",
+            "metrics": {
+              "containment": -10,
+              "service": 10,
+              "trust": -5,
+              "fatigue": 10
+            }
+          }
+        }
+      ]
+    },
+    "node_02": {
+      "id": "node_02",
+      "phase": "Phase 2: 報告と調査",
+      "eyebrow": "状況分析",
+      "title": "CSIRTへの報告と全社調査",
+      "body": [
+        "端末の切り離しを指示した後、次に取るべきアクションを選択してください。"
+      ],
+      "alert": "全社への影響調査が必要です",
+      "evidence": [],
+      "choices": [
+        {
+          "id": "c2_1",
+          "label": "CSIRTにインシデント報告を行い、同型メールの受信状況を全社調査する",
+          "description": "組織的対応に移行する。",
+          "effect": {
+            "rank": "recommended",
+            "nextNode": "ending_true",
+            "tag": "組織連携",
+            "rationale": "早期のCSIRT報告と全社調査により二次被害を防ぐことができます。",
+            "metrics": {
+              "containment": 50,
+              "service": -5,
+              "trust": 20,
+              "fatigue": 15
+            }
+          }
+        }
+      ]
+    }
+  },
+  "endings": {
+    "ending_true": {
+      "id": "ending_true",
+      "type": "true",
+      "title": "True End: 迅速な初動と完璧な組織連携",
+      "summary": "すべての局面で推奨される対応を選択できました。被害を最小限に抑え、全社的な警戒体制の構築に成功しました。"
+    },
+    "ending_bad_01": {
+      "id": "ending_bad_01",
+      "type": "bad",
+      "title": "Bad End: 初期対応の失敗と被害の拡大",
+      "summary": "悪択（bad）を選択したため、インシデント対応に致命的な失敗が発生し、大規模な被害に繋がりました。"
+    },
+    "ending_normal": {
+      "id": "ending_normal",
+      "type": "normal",
+      "title": "Normal End: インシデント鎮火（要改善点あり）",
+      "summary": "致命的な失敗は避けられたものの、一部推奨されない対応が含まれていました。振り返り画面で選択の改善点を確認しましょう。"
+    }
+  }
+}
