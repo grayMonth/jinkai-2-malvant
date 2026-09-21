@@ -32,7 +32,7 @@
         {
           "label": "販促イベント",
           "value": "TV CM放映中。正規流入が増える時間帯と重なる",
-          "tone": "info"
+          "tone": "neutral"
         }
       ],
       "choices": [
@@ -206,7 +206,7 @@
         {
           "label": "攻撃規模",
           "value": "ピーク 38,000 rps → 現在 6,200 rps",
-          "tone": "info"
+          "tone": "ok"
         },
         {
           "label": "支払い後の動向",
@@ -363,7 +363,7 @@
         {
           "label": "攻撃トラフィック",
           "value": "直近60分間、検知なし",
-          "tone": "info"
+          "tone": "ok"
         },
         {
           "label": "事業影響",
